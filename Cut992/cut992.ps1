@@ -1,0 +1,1 @@
+Get-Content input.txt | ForEach-Object { $_.Substring(3) } | Set-Content output.txt

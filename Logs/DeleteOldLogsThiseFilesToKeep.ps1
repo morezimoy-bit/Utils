@@ -1,12 +1,4 @@
-﻿# Удалям старые файлы, но оставляем самые новые при любом раскладе обстоятельств (логи перестали писаться)
-$FileMask = "Errors*.txt*"
-$DaysOld = 15
-$FilesToKeep = 10
-
-$FolderPath = "D:\Halk\Tests\Logs"
-
-
-function Get-OldFiles {
+﻿function Get-OldFiles {
     param(
         [string]$FolderPath,
         [string]$FileMask,
@@ -27,55 +19,54 @@ function Get-OldFiles {
 
 function Remove-OldFiles {
     param(
-        [System.IO.FileInfo[]]$Files,
+        [string]$FolderPath,
+        [string]$FileMask,
+        [int]$DaysOld,
         [int]$FilesToKeep
     )
+    # Получаем старые файлы
+    $OldFiles = Get-OldFiles `
+        -FolderPath $FolderPath `
+        -FileMask $FileMask `
+        -DaysOld $DaysOld
+
 
     # Получаем количество всех фалов
     [int]$AllFilesCount = @(Get-ChildItem -Path $FolderPath -File -Filter $FileMask).Count
+
+    # Подсчитываем сколько файлов из выбранных на удаление оставить
     Write-Host "Всего:" $AllFilesCount
     Write-Host "Бронь:"$FilesToKeep
-    Write-Host "Просроценных:"$Files.Count
+    Write-Host "Просроценных:"$OldFiles.Count
 
 
-    if (($AllFilesCount - $Files.Count) -ge $FilesToKeep) {
+    if (($AllFilesCount - $OldFiles.Count) -ge $FilesToKeep) {
         $FilesToKeep = 0
         Write-Host "Да"
     }
     else {
-        $FilesToKeep = $FilesToKeep - ($AllFilesCount - $Files.Count)
+        $FilesToKeep = $FilesToKeep - ($AllFilesCount - $OldFiles.Count)
         Write-Host "Нет"
     }
 
     Write-Host "Бронь:"$FilesToKeep
 
     # Сначала сортируем файлы от новых к старым
-    $Files = $Files | Sort-Object LastWriteTime -Descending
+    $OldFiles = $OldFiles | Sort-Object LastWriteTime -Descending
 
 
 
     # Пропускаем последние файлы, которые нужно сохранить
-    $FilesToDelete = $Files | Select-Object -Skip $FilesToKeep
+    $FilesToDelete = $OldFiles | Select-Object -Skip $FilesToKeep
 
     foreach ($File in $FilesToDelete) {
-        Remove-Item `
-            -Path $File.FullName `
-            -Force `
-            -Verbose `
-            -WhatIf
+        Remove-Item -Path $File.FullName -Force -Verbose # -WhatIf # Убрать предыдущий rem если надо тестировать
     }
 }
 
 
-# Получаем старые файлы
-$OldFiles = Get-OldFiles `
-    -FolderPath $FolderPath `
-    -FileMask $FileMask `
-    -DaysOld $DaysOld
 
 
 
-# Удаляем старые файлы, сохраняя последние 10
-Remove-OldFiles `
-    -Files $OldFiles `
-    -FilesToKeep $FilesToKeep
+Remove-OldFiles -FolderPath "D:\Halk\Tests\Logs" -FileMask "Errors*.txt*" -DaysOld 180 -FilesToKeep 10
+
